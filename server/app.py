@@ -4,16 +4,6 @@ from config import app, db, api
 from flask_restful import Resource
 from sqlalchemy.exc import IntegrityError
 
-# Standard library imports
-
-# Remote library imports
-from flask import request
-from flask_restful import Resource
-
-# Local imports
-from config import app, db, api
-# Add your model imports
-
 class Students(Resource):
     def get(self):
         students = [s.to_dict(rules=('-exams', '-flashcards', )) for s in Student.query.all()]

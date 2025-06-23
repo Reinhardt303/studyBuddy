@@ -23,7 +23,7 @@ def create_courses():
     "Mathematics", "Anthropology", "Political Science", "Environmental Studies",
     "Artificial Intelligence", "Game Design", "Machine Learning", "Ethics"
     ]
-    prefixes = random.choice(["Intro to", "Foundations of", "Advanced", "Seminar in", "Principles of"])
+    prefixes = ["Intro to", "Foundations of", "Advanced", "Seminar in", "Principles of"]
     for _ in range(25):
         c = Course(
             title=f'{random.choice(prefixes)} {random.choice(course_topics)}'
@@ -70,14 +70,14 @@ if __name__ == '__main__':
         Course.query.delete()
         db.session.commit()  
 
-        print("Seeding courses...")
-        courses = create_courses()
-        db.session.add_all(courses)
-        db.session.commit()  
-
         print("Seeding students...")
         students = create_students()
         db.session.add_all(students)
+        db.session.commit()  
+
+        print("Seeding courses...")
+        courses = create_courses()
+        db.session.add_all(courses)
         db.session.commit()  
 
         print("Seeding exams...")
