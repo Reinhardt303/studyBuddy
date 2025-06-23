@@ -1,9 +1,10 @@
 from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.ext.associationproxy import association_proxy
-from marshmallow import Schema, fields, SQLAlchemyAutoSchema
+from marshmallow import Schema, fields
 from config import bcrypt, db
 from sqlalchemy.orm import validates
 from sqlalchemy.ext.hybrid import hybrid_property
+from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
 
 class Student(db.Model, SerializerMixin):
