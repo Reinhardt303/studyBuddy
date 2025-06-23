@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+from models import Student, Course, Flashcard, Exam
 
 # Standard library imports
 
@@ -10,6 +10,9 @@ from flask_restful import Resource
 from config import app, db, api
 # Add your model imports
 
+class Students(Resource):
+    def get(self):
+        students = [s.to_dict(rules('-exams', '-flashcards', )) for s in Student.query.all()]
 
 # Views go here!
 
