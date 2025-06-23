@@ -1,4 +1,4 @@
-#!/home/reinhardt303/Development/code/Phase-5/studyBuddy/server/venv/bin/python3
+#!/home/reinhardt303/Development/code/Phase-5/studyBuddy/server/venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys

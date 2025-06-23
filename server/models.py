@@ -1,6 +1,6 @@
 from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.ext.associationproxy import association_proxy
-from marshmallow import Schema, fields
+from marshmallow import fields
 from config import bcrypt, db
 from sqlalchemy.orm import validates
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -16,9 +16,9 @@ class Student(db.Model, SerializerMixin):
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, onupdate=db.func.now())
 
-    def __init__(self, username, password):
-        self.username = username
-        self._password_hash = password
+  #  def __init__(self, username, password):
+   #     self.username = username
+  #      self._password_hash = password
 
     @validates("username")
     def validate_username(self, key, value):
@@ -43,12 +43,12 @@ class Student(db.Model, SerializerMixin):
 
     exams = db.relationship('Exam', back_populates='student', cascade='all, delete-orphan')
     flashcards = db.relationship('Flashcard', back_populates='student', cascade='all, delete-orphan')
-    courses = association_proxy('exams', 'courses') #Could be an error in here
+    courses = association_proxy('exams', 'course') #Could be an error in here
 
     serialize_rules = ('-exams.student', '-flashcards.student', '-exams,student.exams', '-flashcards.student.flashcards', '-_password_hash')
 
 class StudentSchema(SQLAlchemyAutoSchema):
-    class Meta:
+    class Meta: #type: ignore
         model = Student
         load_instance = True
         include_relationships = True
@@ -63,27 +63,26 @@ class StudentSchema(SQLAlchemyAutoSchema):
 class Course(db.Model, SerializerMixin):
     __tablename__ = 'courses'
 
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String, unique=True, nullable=False)
-    created_at = db.Column(db.DateTime, server_default=db.func.now())
-    updated_at = db.Column(db.DateTime, onupdate=db.func.now())
+  #  id = db.Column(db.Integer, primary_key=True)
+  #  title = db.Column(db.String, unique=True, nullable=False)
+  #  created_at = db.Column(db.DateTime, server_default=db.func.now())
+  #  updated_at = db.Column(db.DateTime, onupdate=db.func.now())
 
     def __init__(self, title):
         self.title = title
 
-    exams = db.relationship('Exam', back_populates='student', cascade='all, delete-orphan')
-    flashcards = db.relationship('Flashcard', back_populates='student', cascade='all, delete-orphan')
-    students = association_proxy('exams', 'students') #Could be an error in here
+    exams = db.relationship('Exam', back_populates='course', cascade='all, delete-orphan')
+    flashcards = db.relationship('Flashcard', back_populates='course', cascade='all, delete-orphan')
+    students = association_proxy('exams', 'student') #Could be an error in here
     serialize_rules = ('-exams.student', '-flashcards.student', '-exams,student.exams', '-flashcards.student.flashcards', '-_password_hash')
 
 class CourseSchema(SQLAlchemyAutoSchema):
-    class Meta:
+    class Meta: #type: ignore
         model = Course
         load_instance = True
         include_relationships = True
         include_fk = True
-        exclude = ('_password_hash',)
-
+        
     exams = fields.Nested('ExamSchema', many = True, exclude=('student',))
     flashcards = fields.Nested('FlashcardSchema', many = True, exclude=('student',))
     students = fields.List(fields.Str())
@@ -99,23 +98,22 @@ class Flashcard(db.Model, SerializerMixin):
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, onupdate=db.func.now())
 
-    def __init__(self, front, back, course_id=None, student_id=None):
-        self.front = front
-        self.back = back
-        self.student_id = student_id 
-        self.course_id = course_id
+#     def __init__(self, front, back, course_id=None, student_id=None):
+#        self.front = front
+ #       self.back = back
+#        self.student_id = student_id 
+ #       self.course_id = course_id 
 
     course = db.relationship('Course', back_populates='flashcards')
     student = db.relationship('Student', back_populates='flashcards')
 
-class FlashcasrdSchema(SQLAlchemyAutoSchema):
-    class Meta:
+class FlashcardSchema(SQLAlchemyAutoSchema):
+    class Meta: #type: ignore
         model = Flashcard
         load_instance = True
         include_relationships = True
         include_fk = True
-        exclude = ('_password_hash',)
-
+        
     student = fields.Nested('StudentSchema', only=('id', 'username'))  # avoid circular refs
     course = fields.Nested('CourseSchema', only=('id', 'title'))
 
@@ -135,13 +133,12 @@ class Exam(db.Model, SerializerMixin):
     student = db.relationship('Student', back_populates='exams')
 
 class ExamSchema(SQLAlchemyAutoSchema):
-    class Meta:
+    class Meta: #type: ignore
         model = Exam
         load_instance = True
         include_relationships = True
         include_fk = True
-        exclude = ('_password_hash',)
-
+        
     student = fields.Nested('StudentSchema', only=('id', 'username')) 
     course = fields.Nested('CourseSchema', only=('id', 'title'))
     file_url = fields.String()
