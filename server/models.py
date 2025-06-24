@@ -2,7 +2,6 @@ from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.ext.associationproxy import association_proxy
 from marshmallow import fields
 from config import bcrypt, db
-from sqlalchemy.orm import validates
 from sqlalchemy.ext.hybrid import hybrid_property
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 

@@ -1,21 +1,33 @@
-from models import Student, Course, Flashcard, Exam
-from flask import request, make_response, Flask, jsonify, session
+from models import Student, Course, StudentSchema, CourseSchema, ExamSchema, FlashcardSchema, Flashcard
+from flask import request, make_response, Flask, session
 from config import app, db, api
 from flask_restful import Resource
 from sqlalchemy.exc import IntegrityError
 
+student_schema = StudentSchema()
+students_schema = StudentSchema(many=True)
+course_schema = CourseSchema()
+courses_schema = CourseSchema(many=True)
+exam_schema = ExamSchema(many=True)
+flashcard_schema = FlashcardSchema(many=True)
+
 class Students(Resource):
     def get(self):
-        students = [s.to_dict(rules=('-exams', '-flashcards', )) for s in Student.query.all()]
-        return make_response(students, 200)
+        students = Student.query.all()
+        result = students_schema.dump(students)
+        return make_response(result, 200)
     
     def post(self):
         req_data = request.get_json()
         try:
-            student = Student(**req_data) #type: ignore
-            db.session.add(student)
+            student_data = student_schema.load(req_data)
+            new_student = Student(
+                username=student_data['username'],
+                password = student_data['password']
+            )
+            db.session.add(new_student)
             db.session.commit()
-            return make_response(student.to_dict(), 201)
+            return make_response(student_schema.dump(new_student), 201)
         except ValueError as e:
             return make_response({'error': str(e)}, 400)
         
@@ -23,22 +35,28 @@ class Courses(Resource):
     def get(self):
         student_id = session.get('student_id')
         if not student_id:
-            return make_response({'error': 'Please log in'})
-        
+            return make_response({'error': 'Please log in'}, 401)
+
         student = Student.query.get(student_id)
         if not student:
-            return make_response({'error': 'Student not found'})
-        courses = [c.to_dict(rules=('-exams', '-flashcards', )) for c in student.courses]
-        return make_response(courses, 200)
-    
+            return make_response({'error': 'Student not found'}, 404)
+        
+        exam_course_ids = {exam.course_id for exam in student.exams}
+        flashcard_course_ids = {fc.course_id for fc in student.flashcards}
+        relevant_course_ids = list(exam_course_ids.union(flashcard_course_ids))
+
+        courses = Course.query.filter(Course.id.in_(relevant_course_ids)).all()
+
+        return make_response(courses_schema.dump(courses), 200)
+
     def post(self):
         req_data = request.get_json()
         try:
-            course = Course(**req_data) #type: ignore
-            db.session.add(course)
+            new_course = Course(title=req_data["title"]) #type: ignore
+            db.session.add(new_course)
             db.session.commit()
-            return make_response(course.to_dict(), 201)
-        except ValueError as e:
+            return make_response(course_schema.dump(new_course), 201)
+        except Exception as e:
             return make_response({'error': str(e)}, 400)
 
 class ExamsByStudentsCourse(Resource):
@@ -46,27 +64,54 @@ class ExamsByStudentsCourse(Resource):
         student_id = session.get('student_id')
         if not student_id:
             return {'error': 'Please log in'}, 401
-        
-        course = Course.query.get(id)
-        if not course:
-            return {'error': 'Course not found'}
-        
-        exams = [e.to_dict(rules=('-student', '-course')) for e in course.exams if e.student_id == student_id]
 
-        return {'exams': exams}, 200
-    
-class FlashcardsByStudentsCourse(Resource):
-    def get(self, id):
-        student_id = session.get('student_id')
-        if not student_id:
-            return {'error': 'Please log in'}, 401
-        
         course = Course.query.get(id)
         if not course:
             return {'error': 'Course not found'}, 404
-        flashcards = [f.to_dict(rules=('-student', '-course')) for f in course.flashcards if f.student_id == student_id]
 
-        return {'flashcards': flashcards}, 200
+        exams = [e for e in course.exams if e.student_id == student_id]
+        return {'exams': exam_schema.dump(exams)}, 200
+    
+class FlashcardsByStudentsCourse(Resource):
+    def get(self, course_id):
+        student_id = session.get('student_id')
+        if not student_id:
+            return {'error': 'Please log in'}, 401
+
+        course = Course.query.get(course_id)
+        if not course:
+            return {'error': 'Course not found'}, 404
+
+        flashcards = [f for f in course.flashcards if f.student_id == student_id]
+        return {'flashcards': flashcard_schema.dump(flashcards)}, 200
+    
+    def post(self, course_id):
+        student_id = session.get('student_id')
+        if not student_id:
+            return {'error': 'Please log in'}, 401
+
+        course = Course.query.get(course_id)
+        if not course:
+            return {'error': 'Course not found'}, 404
+
+        req_data = request.get_json()
+        try:
+            flashcard_data = {
+                'front': req_data['front'],#type: ignore
+                'back': req_data['back'],#type: ignore
+                'student_id': student_id,
+                'course_id': course_id
+            }
+
+            new_flashcard = Flashcard(**flashcard_data)
+            db.session.add(new_flashcard)
+            db.session.commit()
+
+            return flashcard_schema.dump([new_flashcard]), 201
+
+        except Exception as e:
+            db.session.rollback()
+            return {'error': str(e)}, 400
 
 api.add_resource(Courses, '/courses')
 api.add_resource(ExamsByStudentsCourse, '/courses/<int:course_id>/exams')
